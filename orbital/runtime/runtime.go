@@ -3,15 +3,19 @@ package runtime
 import (
 	"fmt"
 	"runtime"
-	"strings"
+
+	"github.com/prodXCE/orbital/backends"
 )
 
-func RunContainer(command string, args []string) {
-	fmt.Println("============================================")
-	fmt.Printf("HOST OS DETECTED: %s\n", runtime.GOOS)
-	fmt.Println("============================================")
-
-	fmt.Printf("Starting container for command: '%s' with args: %s\n", command, strings.Join(args, " "))
-
-	fmt.Println("\n[INFO] Phase 1 completed. No container started")
+// GetManager is our backend factory. Its logic remains correct.
+func GetManager() (ContainerManager, error) {
+	switch runtime.GOOS {
+	case "linux":
+		fmt.Println("[INFO] Linux detected. The real backend will be implemented in Phase 3.")
+		return backends.NewUnsupportedBackend(), nil
+	default:
+		fmt.Printf("[INFO] OS '%s' is not yet supported. Using fallback.\n", runtime.GOOS)
+		return backends.NewUnsupportedBackend(), nil
+	}
 }
+
