@@ -1,106 +1,80 @@
 # Orbital - A Portable Container Engine in Go
 
-Orbital is a learning project to build a lightweight, cross-platform containerization tool from scratch in Go. The goal is to demystify the core concepts of process isolation (like namespaces, jails, and job objects) by creating a functional, portable container engine.
+Orbital is a learning project to build a lightweight, cross-platform containerization tool from scratch in Go. The goal is to demystify the core concepts of process isolation by creating a functional, portable container engine that runs on multiple operating systems.
 
 This project is built with a modular, pluggable architecture, allowing different OS-specific isolation backends to be used by a single, unified runtime engine.
 
-## Current Status: Phase 3 - Linux Backend with Namespaces
+## Current Status: Phase 4 - Cross-Platform Support (Linux & Windows)
 
-This phase marks a major milestone: **Orbital can now run its first truly isolated container on Linux.** We have built our first functional backend using Linux's native process isolation capabilities.
+This phase achieves a major architectural goal: **Orbital is now a true cross-platform application.** We have successfully implemented a second native backend for the Windows operating system, which runs alongside our existing Linux backend.
 
-The core architectural work from Phase 2 has paid off, allowing us to "plug in" this new Linux backend without changing the CLI or the overall program flow.
+The `orbital` binary can be compiled on either Linux or Windows, and it will automatically select the correct native backend to provide process isolation.
 
 ## Features Implemented
 
-- **Functional Linux Backend:** A native backend that uses Go's `syscall` package to interact directly with the Linux kernel.
-- **Process & Filesystem Isolation:**
-  - **Namespaces:** The backend creates new `UTS` (for hostname), `PID` (for process IDs), and `Mount` namespaces for the container.
-  - `chroot`: The container's root filesystem is changed to a dedicated directory, preventing it from accessing the host's filesystem.
-- **Go Build Tags:** The Linux-specific code is isolated using the `//go:build linux` tag, ensuring the project remains buildable on other operating systems like Windows and macOS.
-- **Parent/Child Process Execution:** Implemented the standard container pattern where the main process sets up the namespaces and a "child" process executes within them.
+### Linux Backend
 
-## How to Build and Run (Linux)
+- **Full Isolation:** Uses Linux Namespaces (`UTS`, `PID`, `Mount`, `Network`) for high-level isolation.
+- **Filesystem Sandboxing:** Uses `chroot` to confine the container to a dedicated root filesystem.
+- **Virtual Networking:** Creates a network bridge and veth pairs to provide containers with a private IP address and internet access via NAT on the host.
 
-**Note:** Running a container currently requires a Linux host, `sudo` privileges, and Docker (to create the initial root filesystem).
+### Windows Backend (New!)
 
-### 1. Prerequisites (Linux Host)
+- **Process Grouping with Job Objects:** Uses native Windows Job Objects to group the container process and any of its children. This ensures that when the main process is terminated, all child processes are also cleaned up.
+- **Process-Level Isolation:** Provides a lightweight form of isolation focused on process lifecycle management.
+- **Build-Tag Separation:** Uses Go build tags (`//go:build windows`) to ensure the Windows-specific code is completely separate from the Linux code.
+- **Note:** This backend does _not_ provide filesystem or network isolation. The containerized process shares the host's filesystem and network stack, which is typical for basic process containers on Windows without Hyper-V.
+
+## How to Build and Run
+
+### Prerequisites
 
 - Go (version 1.18 or later)
 - Git
-- Docker
 
-### 2. One-Time Root Filesystem Setup
+### On Linux
 
-The container needs its own root filesystem (`/`). We can create a minimal one using an Alpine Linux image from Docker.
-
-**Run this in your terminal:**
+**1. One-Time Setup:** You will need `docker` to create the rootfs and `bridge-utils` for networking.
 
 ```bash
-# Create a directory for the rootfs
-mkdir -p /tmp/orbital-rootfs
+# Install bridge utilities
+sudo apt-get update && sudo apt-get install bridge-utils
 
-# Use Docker to export the Alpine filesystem into our new directory
+# Create the root filesystem
+mkdir -p /tmp/orbital-rootfs
 docker export $(docker create alpine) | sudo tar -C /tmp/orbital-rootfs -xvf -
 ```
 
-### 3. Build the Orbital Binary
+**2. Build the Binary:**
 
 ```bash
-# Clone the repository if you haven't already
 git clone https://github.com/prodXCE/orbital.git
 cd orbital
-
-# Tidy dependencies and build the executable
-go mod tidy
 go build -o orbital
 ```
 
-### 4. Run Your First Container!
-
-You must use `sudo` because creating namespaces and using `chroot` are privileged operations.
+**3. Run a Container:** `sudo` is required for creating namespaces and configuring the network.
 
 ```bash
 sudo ./orbital run /bin/sh
 ```
 
-## Expected Output & Verification
+This will place you in a fully isolated shell with its own IP address.
 
-Upon running the command, you will be dropped into a new shell prompt, which is running inside your isolated container:
+### On Windows
 
-```
-[INFO] Linux detected. Using the native Linux backend.
---> Using backend of type: *backends.LinuxBackend
-[Linux Backend] Starting container for command: /bin/sh []
---> Entering child process execution mode...
-[Child Process] Running inside container! Command: /bin/sh []
-Container started with PID: 31337
-/ #
+**1. Build the Binary:** Open a PowerShell or Command Prompt.
+
+```powershell
+git clone https://github.com/your-username/orbital.git
+cd orbital
+go build -o orbital.exe
 ```
 
-You are now inside the container. You can verify the isolation:
+**2. Run a Container:** No special privileges are required.
 
-- **Check the hostname:**
-
-```bash
-/ # hostname
-orbital-container
+```powershell
+./orbital.exe powershell
 ```
 
-- **Check the running processes:**
-
-```bash
-/ # ps aux
-```
-
-You will see that your shell (`/bin/sh`) has PID 1. You cannot see any processes from the host OS.
-
-- **Check the root directory:**
-
-```bash
-/ # ls /
-bin    dev    etc    home   lib    media  mnt    proc   root   ...
-```
-
-This lists the contents of `/tmp/orbital-rootfs`, not your host's `/`.
-
-To exit the container and return to your host shell, simply type `exit`.
+This will start a new PowerShell process that is managed within a Windows Job Object. You can exit by typing `exit`.
