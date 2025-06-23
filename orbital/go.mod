@@ -1,8 +1,13 @@
 module github.com/prodXCE/orbital
 
-go 1.19
+go 1.23.0
 
-require github.com/spf13/cobra v1.9.1
+toolchain go1.24.4
+
+require (
+	github.com/spf13/cobra v1.9.1
+	golang.org/x/sys v0.33.0
+)
 
 require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

@@ -1,30 +1,23 @@
 package main
 
 import (
-	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/prodXCE/orbital/backends"
 	"github.com/prodXCE/orbital/cli"
 )
 
 func main() {
-	// This is the check that separates the parent from the child process.
-	// If the program is run with "child" as the first argument, it will
-	// execute the container's internal setup instead of the CLI.
+	// The child process re-execution is a Linux-specific pattern for our design.
+	// This logic will not run on Windows, which is correct.
 	if len(os.Args) > 1 && os.Args[1] == "child" {
-		fmt.Println("--> Entering child process execution mode...")
-		// We are inside the container, execute the child process logic.
-		// This must be gated by the OS, as ChildProcess is in a linux-only file.
-		if backends.IsLinux() { // We will add this helper function.
+		if runtime.GOOS == "linux" {
 			backends.ChildProcess(os.Args[2], os.Args[3:])
-		} else {
-			fmt.Println("Error: Child process mode is only supported on Linux.")
-			os.Exit(1)
+			return
 		}
-		return
 	}
 
-	// Otherwise, run the normal CLI.
+	// All other OSes will run the CLI directly.
 	cli.Execute()
 }
