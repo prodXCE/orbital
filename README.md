@@ -1,135 +1,67 @@
-# Orbital – A Portable Container Engine in Go
+Orbital - A Portable Container Engine in Go
 
-**Orbital** is a hands-on learning project focused on building a lightweight, cross-platform containerization tool from scratch using Go. The goal is to **demystify process isolation techniques** like namespaces, jails, and job objects by creating a functional, portable container engine.
+Orbital is a learning project to build a lightweight, cross-platform containerization tool from scratch in Go. The goal is to demystify the core concepts of process isolation (like namespaces, jails, and job objects) by creating a functional, portable container engine.
 
-Orbital is designed with a **modular, pluggable architecture** that can support different OS-specific isolation backends under a unified runtime engine.
+This project is built with a modular, pluggable architecture, allowing different OS-specific isolation backends to be used by a single, unified runtime engine.
+Current Status: Phase 2 - Core Architecture & Interface
 
----
+This phase implements the core architectural foundation of Orbital. The project now has a clean, pluggable system ready to accept OS-specific backends. We have defined a universal ContainerManager interface that all backends must adhere to and created a "factory" that selects the appropriate backend at runtime.
 
-## 🚀 Project Status: Phase 1 – CLI Foundation & Skeleton
+No actual containerization occurs yet, but running the run command now demonstrates that the architectural model is working correctly by selecting a fallback "unsupported" backend and exiting gracefully.
+Features Implemented
 
-This phase establishes the basic project structure. The application:
+    ContainerManager Interface: A clear Go interface defines the required behavior for all backends (Start, Stop, Status).
 
-* Compiles successfully
-* Provides a functional **Command-Line Interface (CLI)**
-* Includes a **placeholder runtime engine** with OS detection
+    Pluggable Backend Factory: A factory function (runtime.GetManager()) automatically detects the host OS and selects the correct backend.
 
-> **Note:** No actual containerization or process isolation is implemented yet. This is an architecture and CLI preparation phase.
+    Fallback "Unsupported" Backend: A safe, default backend is used for any operating system that doesn't have a specific implementation yet, ensuring the program behaves predictably.
 
----
+    Import Cycle Resolution: The architecture has been refined to prevent circular dependencies between packages, which is a key principle of good Go design.
 
-## ✨ Key Features
+How to Build and Run
+Prerequisites
 
-* **Modular Project Structure**
-  Clean separation of concerns into:
+    Go (version 1.18 or later)
 
-  * `cli` package
-  * `runtime` package
-  * `backends` package
+    Git
 
-* **Professional CLI with Cobra**
-  Supports:
+Build Steps
 
-  * `orbital run [command]` → Placeholder for running commands
-  * `orbital status [containerID]` → Placeholder for checking status
-  * Auto-generated help text with `--help`
+    Clone the repository (if you haven't already):
 
-* **Host OS Detection**
-  The runtime accurately detects the underlying operating system (Linux, Windows, macOS, etc.).
+    git clone https://github.com/prodXCE/orbital.git
+    cd orbital
 
-* **Go Module Support**
-  Fully initialized as a Go module with proper dependency management.
+    Fetch Go dependencies:
 
----
+    go mod tidy
 
-## 🔧 Getting Started
+    Build the binary:
+    This command compiles the project and creates an executable named orbital in the root directory.
 
-### Prerequisites
+    go build -o orbital
 
-* Go (version **1.18** or later)
-* Git
+Usage Examples
 
-### Setup & Build Instructions
+Running the tool now demonstrates the new architecture. The program correctly identifies that no real backend is available and prints an error, proving the system works as designed.
 
-1. **Clone the Repository**
-   `git clone https://github.com/prodXCE/orbital.git`
+1. Attempt to run a command on Linux:
 
-2. **Navigate to Project Directory**
-   `cd orbital`
+./orbital run /bin/sh
 
-3. **Fetch Dependencies**
-   `go mod tidy`
+Expected Output:
 
-4. **Build the Project**
-   `go build -o orbital`
+[INFO] Linux detected. The real backend will be implemented in Phase 3.
+--> Using backend of type: *backends.UnsupportedBackend
+Error starting container: container operations are not supported on this OS: linux
 
-   This will generate the `orbital` executable in the root directory.
+2. Attempt to run a command on macOS or Windows:
 
----
+./orbital run cmd.exe
 
-## 📦 Usage Examples
+Expected Output (on Windows):
 
-### 1. View CLI Help
+[INFO] OS 'windows' is not yet supported. Using fallback.
+--> Using backend of type: *backends.UnsupportedBackend
+Error starting container: container operations are not supported on this OS: windows
 
-```bash
-./orbital --help
-```
-
-### 2. Run a Command (Simulated)
-
-```bash
-./orbital run /bin/sh -c "echo hello from inside the container"
-```
-
-**Expected Output:**
-
-```
-========================================
-Host OS detected: linux
-========================================
-Starting container for command: '/bin/sh' with args: -c "echo hello from inside the container"
-
-[INFO] Phase 1 complete. No container was actually started.
-```
-
-### 3. Check Container Status (Simulated)
-
-```bash
-./orbital status my-container-123
-```
-
-**Expected Output:**
-
-```
-Checking status for container: my-container-123...
-[INFO] Status command is not implemented yet.
-```
-
----
-
-## 🗺️ Project Roadmap
-
-* ✅ Phase 1: Project Skeleton & CLI Foundation
-* ⏳ Phase 2: Basic Process Isolation (namespaces, minimal sandbox)
-* ⏳ Phase 3: Filesystem Isolation (chroot, overlay filesystems)
-* ⏳ Phase 4: Networking (virtual interfaces, port mappings)
-* ⏳ Phase 5: OS-Specific Backends (platform-level integration)
-
----
-
-## 🤝 Contribution Guidelines
-
-This project is intended for educational purposes, but contributions are always welcome.
-You can:
-
-* Fork the repository
-* Open issues for bugs, improvements, or feature ideas
-* Submit pull requests
-
-Your feedback will help improve the project and refine the learning process.
-
----
-
-## 📄 License
-
-This project is open-source and available under the [MIT License](LICENSE).
