@@ -47,7 +47,7 @@ docker export $(docker create alpine) | sudo tar -C /tmp/orbital-rootfs -xvf -
 
 ```bash
 # Clone the repository if you haven't already
-git clone https://github.com/your-prodXCE/orbital.git
+git clone https://github.com/prodXCE/orbital.git
 cd orbital
 
 # Tidy dependencies and build the executable
