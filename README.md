@@ -1,67 +1,106 @@
-Orbital - A Portable Container Engine in Go
+# Orbital - A Portable Container Engine in Go
 
 Orbital is a learning project to build a lightweight, cross-platform containerization tool from scratch in Go. The goal is to demystify the core concepts of process isolation (like namespaces, jails, and job objects) by creating a functional, portable container engine.
 
 This project is built with a modular, pluggable architecture, allowing different OS-specific isolation backends to be used by a single, unified runtime engine.
-Current Status: Phase 2 - Core Architecture & Interface
 
-This phase implements the core architectural foundation of Orbital. The project now has a clean, pluggable system ready to accept OS-specific backends. We have defined a universal ContainerManager interface that all backends must adhere to and created a "factory" that selects the appropriate backend at runtime.
+## Current Status: Phase 3 - Linux Backend with Namespaces
 
-No actual containerization occurs yet, but running the run command now demonstrates that the architectural model is working correctly by selecting a fallback "unsupported" backend and exiting gracefully.
-Features Implemented
+This phase marks a major milestone: **Orbital can now run its first truly isolated container on Linux.** We have built our first functional backend using Linux's native process isolation capabilities.
 
-    ContainerManager Interface: A clear Go interface defines the required behavior for all backends (Start, Stop, Status).
+The core architectural work from Phase 2 has paid off, allowing us to "plug in" this new Linux backend without changing the CLI or the overall program flow.
 
-    Pluggable Backend Factory: A factory function (runtime.GetManager()) automatically detects the host OS and selects the correct backend.
+## Features Implemented
 
-    Fallback "Unsupported" Backend: A safe, default backend is used for any operating system that doesn't have a specific implementation yet, ensuring the program behaves predictably.
+- **Functional Linux Backend:** A native backend that uses Go's `syscall` package to interact directly with the Linux kernel.
+- **Process & Filesystem Isolation:**
+  - **Namespaces:** The backend creates new `UTS` (for hostname), `PID` (for process IDs), and `Mount` namespaces for the container.
+  - `chroot`: The container's root filesystem is changed to a dedicated directory, preventing it from accessing the host's filesystem.
+- **Go Build Tags:** The Linux-specific code is isolated using the `//go:build linux` tag, ensuring the project remains buildable on other operating systems like Windows and macOS.
+- **Parent/Child Process Execution:** Implemented the standard container pattern where the main process sets up the namespaces and a "child" process executes within them.
 
-    Import Cycle Resolution: The architecture has been refined to prevent circular dependencies between packages, which is a key principle of good Go design.
+## How to Build and Run (Linux)
 
-How to Build and Run
-Prerequisites
+**Note:** Running a container currently requires a Linux host, `sudo` privileges, and Docker (to create the initial root filesystem).
 
-    Go (version 1.18 or later)
+### 1. Prerequisites (Linux Host)
 
-    Git
+- Go (version 1.18 or later)
+- Git
+- Docker
 
-Build Steps
+### 2. One-Time Root Filesystem Setup
 
-    Clone the repository (if you haven't already):
+The container needs its own root filesystem (`/`). We can create a minimal one using an Alpine Linux image from Docker.
 
-    git clone https://github.com/prodXCE/orbital.git
-    cd orbital
+**Run this in your terminal:**
 
-    Fetch Go dependencies:
+```bash
+# Create a directory for the rootfs
+mkdir -p /tmp/orbital-rootfs
 
-    go mod tidy
+# Use Docker to export the Alpine filesystem into our new directory
+docker export $(docker create alpine) | sudo tar -C /tmp/orbital-rootfs -xvf -
+```
 
-    Build the binary:
-    This command compiles the project and creates an executable named orbital in the root directory.
+### 3. Build the Orbital Binary
 
-    go build -o orbital
+```bash
+# Clone the repository if you haven't already
+git clone https://github.com/your-prodXCE/orbital.git
+cd orbital
 
-Usage Examples
+# Tidy dependencies and build the executable
+go mod tidy
+go build -o orbital
+```
 
-Running the tool now demonstrates the new architecture. The program correctly identifies that no real backend is available and prints an error, proving the system works as designed.
+### 4. Run Your First Container!
 
-1. Attempt to run a command on Linux:
+You must use `sudo` because creating namespaces and using `chroot` are privileged operations.
 
-./orbital run /bin/sh
+```bash
+sudo ./orbital run /bin/sh
+```
 
-Expected Output:
+## Expected Output & Verification
 
-[INFO] Linux detected. The real backend will be implemented in Phase 3.
---> Using backend of type: *backends.UnsupportedBackend
-Error starting container: container operations are not supported on this OS: linux
+Upon running the command, you will be dropped into a new shell prompt, which is running inside your isolated container:
 
-2. Attempt to run a command on macOS or Windows:
+```
+[INFO] Linux detected. Using the native Linux backend.
+--> Using backend of type: *backends.LinuxBackend
+[Linux Backend] Starting container for command: /bin/sh []
+--> Entering child process execution mode...
+[Child Process] Running inside container! Command: /bin/sh []
+Container started with PID: 31337
+/ #
+```
 
-./orbital run cmd.exe
+You are now inside the container. You can verify the isolation:
 
-Expected Output (on Windows):
+- **Check the hostname:**
 
-[INFO] OS 'windows' is not yet supported. Using fallback.
---> Using backend of type: *backends.UnsupportedBackend
-Error starting container: container operations are not supported on this OS: windows
+```bash
+/ # hostname
+orbital-container
+```
 
+- **Check the running processes:**
+
+```bash
+/ # ps aux
+```
+
+You will see that your shell (`/bin/sh`) has PID 1. You cannot see any processes from the host OS.
+
+- **Check the root directory:**
+
+```bash
+/ # ls /
+bin    dev    etc    home   lib    media  mnt    proc   root   ...
+```
+
+This lists the contents of `/tmp/orbital-rootfs`, not your host's `/`.
+
+To exit the container and return to your host shell, simply type `exit`.
