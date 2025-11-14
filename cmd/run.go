@@ -41,7 +41,7 @@ var runCmd = &cobra.Command{
 	},
 
 	/*
-		THE FIX: We must REMOVE (or comment out) this line.
+		THE FIX: Removed (or comment out) this line.
 		This will re-enable flag parsing for 'runCmd'.
 	*/
 	// DisableFlagParsing: true,
