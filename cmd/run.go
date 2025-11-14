@@ -3,9 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
-
-	"github.com/prodXCE/orbital/runner"
 	"github.com/spf13/cobra"
+	"github.com/prodXCE/orbital/runner"
 )
 
 var hostname string
@@ -17,7 +16,7 @@ func init() {
 		&hostname,
 		"hostname",
 		"H",
-		"orbital",
+		"gobox",
 		"Hostname for the container",
 	)
 }
@@ -25,11 +24,12 @@ func init() {
 var runCmd = &cobra.Command{
 	Use:   "run [rootfs path] [command]",
 	Short: "Run a command inside a new container",
-	Long:  "Run a command in a new, isolated container",
+	Long:  `Runs a command in a new, isolated container.`,
 
 	Run: func(cmd *cobra.Command, args []string) {
+
 		if len(args) < 2 {
-			fmt.Println("Usage: orbital run <rootfs-path> and <command> [args...]")
+			fmt.Println("Usage: gobox run <rootfs-path> <command> [args...]")
 			os.Exit(1)
 		}
 
@@ -39,5 +39,9 @@ var runCmd = &cobra.Command{
 		runner.Run(rootfsPath, hostname, command)
 	},
 
-	DisableFlagParsing: true,
+	/*
+		THE FIX: We must REMOVE (or comment out) this line.
+		This will re-enable flag parsing for 'runCmd'.
+	*/
+	// DisableFlagParsing: true,
 }
