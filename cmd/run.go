@@ -1,0 +1,43 @@
+package cmd
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/prodXCE/orbital/runner"
+	"github.com/spf13/cobra"
+)
+
+var hostname string
+
+func init() {
+	rootCmd.AddCommand(runCmd)
+
+	runCmd.Flags().StringVarP(
+		&hostname,
+		"hostname",
+		"H",
+		"orbital",
+		"Hostname for the container",
+	)
+}
+
+var runCmd = &cobra.Command{
+	Use:   "run [rootfs path] [command]",
+	Short: "Run a command inside a new container",
+	Long:  "Run a command in a new, isolated container",
+
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 2 {
+			fmt.Println("Usage: orbital run <rootfs-path> and <command> [args...]")
+			os.Exit(1)
+		}
+
+		rootfsPath := args[0]
+		command := args[1:]
+
+		runner.Run(rootfsPath, hostname, command)
+	},
+
+	DisableFlagParsing: true,
+}
