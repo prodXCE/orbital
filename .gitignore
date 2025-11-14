@@ -1,0 +1,15 @@
+# Binaries
+gobox
+*.exe
+*.out
+
+# Go build cache
+/vendor/
+*.a
+*.s
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+.orbital/
